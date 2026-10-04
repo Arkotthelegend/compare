@@ -14,7 +14,7 @@ Then visit `http://localhost:8000`.
 
 ## How it works
 
-Each game is 8 rounds. A person on the stage is always 1.8 m tall. Scale the object with the slider, by dragging it, or with the arrow keys, then lock in your guess.
+Each game is 8 rounds. A person on the stage is always 1.8 m tall. Drag the handle on the shape to scale it, or nudge it with the arrow keys, then lock in your guess.
 
 The score uses the ratio of your scale to the real size:
 

@@ -8,10 +8,11 @@ const stageEl = document.querySelector("#stage");
 const personEl = document.querySelector("#person");
 const objectEl = document.querySelector("#object");
 const ghostEl = document.querySelector("#ghost");
-const hitEl = document.querySelector("#hit");
+const handleEl = document.querySelector("#handle");
 const loupeEl = document.querySelector("#loupe");
 const loupeArtEl = document.querySelector("#loupeArt");
-const sliderEl = document.querySelector("#slider");
+const personLabelEl = document.querySelector("#personLabel");
+const objectLabelEl = document.querySelector("#objectLabel");
 const readoutEl = document.querySelector("#readout");
 const readoutCaptionEl = document.querySelector("#readoutCaption");
 const questionEl = document.querySelector("#question");
@@ -187,9 +188,11 @@ function setGuess(meters) {
   if (state.phase !== "play") return;
   state.guess = clampMeters(meters);
   state.displayMeters = state.guess;
-  const sliderValue = String(Math.round(metersToSlider(state.guess) * SLIDER_STEPS));
-  if (sliderEl.value !== sliderValue) sliderEl.value = sliderValue;
-  sliderEl.setAttribute("aria-valuetext", formatSize(state.guess));
+  const step = String(Math.round(metersToSlider(state.guess) * SLIDER_STEPS));
+  handleEl.setAttribute("aria-valuemin", "0");
+  handleEl.setAttribute("aria-valuemax", String(SLIDER_STEPS));
+  handleEl.setAttribute("aria-valuenow", step);
+  handleEl.setAttribute("aria-valuetext", formatSize(state.guess));
   readoutEl.textContent = formatSize(state.guess);
   layout();
 }
@@ -227,8 +230,10 @@ function layout() {
   let x = 24 + (availW - usedW) / 2;
 
   place(personEl, x, personW, personH);
+  const personLeft = x;
   x += personW + gapM * ppm;
-  place(objectEl, x + (slotW - objectW) / 2, objectW, objectH);
+  const objectLeft = x + (slotW - objectW) / 2;
+  place(objectEl, objectLeft, objectW, objectH);
   if (showGhost) {
     ghostEl.hidden = false;
     place(ghostEl, x + (slotW - ghostW) / 2, ghostW, ghostH);
@@ -236,29 +241,38 @@ function layout() {
     ghostEl.hidden = true;
   }
 
-  const hitW = Math.max(objectW, 64);
-  const hitH = Math.max(objectH, 64);
-  const objectLeft = x + (slotW - objectW) / 2;
-  const objectCenter = objectLeft + objectW / 2;
   const objectTop = stageEl.clientHeight - ground - objectH;
-  hitEl.hidden = state.phase !== "play";
-  hitEl.classList.toggle("is-padded", hitW > objectW + 4 || hitH > objectH + 4);
-  place(hitEl, objectCenter - hitW / 2, hitW, hitH);
-  hitEl.style.bottom = `${ground + objectH / 2 - hitH / 2}px`;
+  const objectCenter = objectLeft + objectW / 2;
+  state.anchor = { x: objectLeft, y: objectTop + objectH };
 
+  const handleSize = 40;
   const primary = state.object.axis === "height" ? objectH : objectW;
+  let handleLeft = objectLeft + objectW - handleSize * 0.35;
+  let handleTop = objectTop - handleSize * 0.65;
+
   if (primary < 40) {
     loupeEl.hidden = false;
     const loupeSize = 104;
-    let left = objectCenter - loupeSize / 2;
-    let top = objectTop - loupeSize - 28;
-    if (top < 8) top = Math.min(objectTop + objectH + 28, stageEl.clientHeight - loupeSize - 28);
+    let left = objectCenter - loupeSize * 0.42;
+    let top = objectTop - loupeSize - 52;
+    if (top < 12) top = 12;
     left = Math.min(Math.max(8, left), stageEl.clientWidth - loupeSize - 8);
     loupeEl.style.left = `${left}px`;
     loupeEl.style.top = `${top}px`;
+    handleLeft = left + loupeSize - handleSize * 0.4;
+    handleTop = top - handleSize * 0.4;
   } else {
     loupeEl.hidden = true;
   }
+
+  handleLeft = Math.min(Math.max(8, handleLeft), stageEl.clientWidth - handleSize - 8);
+  handleTop = Math.min(Math.max(8, handleTop), stageEl.clientHeight - handleSize - 8);
+  handleEl.hidden = state.phase !== "play";
+  handleEl.style.left = `${handleLeft}px`;
+  handleEl.style.top = `${handleTop}px`;
+
+  placeLabel(personLabelEl, personLeft + personW / 2, stageEl.clientHeight - ground + 8);
+  placeLabel(objectLabelEl, objectCenter, stageEl.clientHeight - ground + 8);
 
   stageEl.setAttribute(
     "aria-label",
@@ -270,6 +284,11 @@ function place(el, left, width, height) {
   el.style.left = `${left}px`;
   el.style.width = `${width}px`;
   el.style.height = `${height}px`;
+}
+
+function placeLabel(el, center, top) {
+  el.style.left = `${center}px`;
+  el.style.top = `${top}px`;
 }
 
 function renderObjectArt() {
@@ -299,11 +318,11 @@ function beginRound() {
   measureHintEl.textContent = state.object.hint;
   roundLabelEl.textContent = `Round ${state.index + 1} / ${ROUND_COUNT}`;
   readoutCaptionEl.textContent = "your scale";
+  objectLabelEl.textContent = state.object.title;
   helpEl.hidden = false;
   revealCardEl.hidden = true;
   lockBtn.hidden = false;
   nextBtn.hidden = true;
-  sliderEl.disabled = false;
   renderObjectArt();
   setGuess(randomStart(state.object.meters));
 }
@@ -321,7 +340,6 @@ function lockIn() {
     label: scoreLabel(score),
   });
   setPhase("reveal");
-  sliderEl.disabled = true;
   helpEl.hidden = true;
   lockBtn.hidden = true;
   nextBtn.hidden = false;
@@ -335,7 +353,7 @@ function lockIn() {
   compareLineEl.textContent = `You guessed ${formatSize(state.lockedGuess)}. The real ${state.object.measure} is ${formatSize(actual)}. ${ratioText(state.lockedGuess, actual)}.`;
   factLineEl.textContent = state.object.note;
   revealCardEl.hidden = false;
-  hitEl.hidden = true;
+  handleEl.hidden = true;
   animateToActual();
 }
 
@@ -409,18 +427,25 @@ function startGame() {
   beginRound();
 }
 
-function bindDrag(el) {
+function bindHandle(el) {
   el.addEventListener("pointerdown", (event) => {
-    if (state.phase !== "play") return;
+    if (state.phase !== "play" || !state.anchor) return;
     if (event.button !== undefined && event.button !== 0) return;
     event.preventDefault();
     el.setPointerCapture(event.pointerId);
-    drag = { pointerId: event.pointerId, y: event.clientY, guess: state.guess };
+    const dist = Math.hypot(event.clientX - state.anchor.x, event.clientY - state.anchor.y);
+    drag = {
+      pointerId: event.pointerId,
+      anchorX: state.anchor.x,
+      anchorY: state.anchor.y,
+      startDist: Math.max(24, dist),
+      guess: state.guess,
+    };
   });
   el.addEventListener("pointermove", (event) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const dy = drag.y - event.clientY;
-    setGuess(drag.guess * 2 ** (dy / 150));
+    const dist = Math.hypot(event.clientX - drag.anchorX, event.clientY - drag.anchorY);
+    setGuess(drag.guess * (dist / drag.startDist));
   });
   const end = (event) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
@@ -434,11 +459,6 @@ document.querySelector("#playBtn").addEventListener("click", startGame);
 document.querySelector("#againBtn").addEventListener("click", startGame);
 lockBtn.addEventListener("click", lockIn);
 nextBtn.addEventListener("click", nextRound);
-
-sliderEl.addEventListener("input", () => {
-  if (state.phase !== "play") return;
-  setGuess(sliderToMeters(Number(sliderEl.value) / SLIDER_STEPS));
-});
 
 document.addEventListener("keydown", (event) => {
   if (state.phase === "play") {
@@ -461,9 +481,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-bindDrag(hitEl);
-bindDrag(loupeEl);
-bindDrag(objectEl);
+bindHandle(handleEl);
 
 personEl.innerHTML = svgMarkup(PERSON);
 personEl.style.color = PERSON.color;
