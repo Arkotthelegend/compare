@@ -23,7 +23,7 @@
       <p class="lede">Guess the real size. Scale the object until it looks right next to a person, then lock it in. Closer to the true scale scores more.</p>
       <ol class="steps">
         <li>A person on the stage is 1.8 m tall.</li>
-        <li>Resize the object with the slider, by dragging it, or with the arrow keys.</li>
+        <li>Drag the handle on the shape to scale it. Arrow keys work too.</li>
         <li>Eight rounds. A perfect match is 100 points.</li>
       </ol>
       <button class="primary" id="playBtn" type="button">Play</button>
@@ -36,12 +36,18 @@
         <p id="measureHint"></p>
       </div>
       <div id="stage" role="img" aria-label="Scale stage">
-        <p class="ref-chip">Person is 1.8 m</p>
-        <div class="ground"></div>
+        <div class="grid"></div>
+        <div class="baseline"></div>
+        <p class="ref-label" id="personLabel">Person (1.8 m)</p>
+        <p class="ref-label" id="objectLabel"></p>
         <div class="actor" id="ghost" hidden></div>
         <div class="actor" id="person"></div>
         <div class="actor" id="object"></div>
-        <div id="hit" hidden></div>
+        <button id="handle" type="button" role="slider" aria-label="Drag to scale" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 4h5v5M20 4l-7 7M9 20H4v-5M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
         <div id="loupe" hidden>
           <div id="loupeArt"></div>
           <span>Zoomed</span>
@@ -50,15 +56,7 @@
       <div class="dock">
         <p class="readout" id="readout">1 m</p>
         <p class="readout-caption" id="readoutCaption">your scale</p>
-        <div class="slider-row">
-          <span class="ends">1 mm</span>
-          <label class="slider-label">
-            <span class="visually-hidden">Size</span>
-            <input id="slider" type="range" min="0" max="10000" value="5000" aria-valuemin="0" aria-valuemax="10000">
-          </label>
-          <span class="ends">100 m</span>
-        </div>
-        <p class="help" id="help">Drag the shape, use the slider, or press the arrow keys. Enter locks in.</p>
+        <p class="help" id="help">Drag the handle on the shape. Arrow keys nudge it. Enter locks in.</p>
         <div class="reveal" id="revealCard" hidden>
           <div class="reveal-score">
             <span id="scoreNum">0</span>
