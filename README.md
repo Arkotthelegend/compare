@@ -1,23 +1,33 @@
-# Size Compare
+# SHADOW
 
-Guess the real size of an object by scaling it next to something shown at its true size. A closer scale scores more points.
+Estimate the height of a 3D object from its light and shadow.
+
+The glowing orb is a real point light. The shadow is rendered from the same geometry the game measures. Grid squares and the slim post are 1 meter. Orbit the camera to look around — the object does not change size.
 
 ## Play
 
-Open `index.html` in a browser, or serve the folder:
-
 ```bash
-python3 -m http.server
+npm install
+npm start
 ```
 
-Then visit `http://localhost:8000`.
+Open `http://localhost:4173`.
 
-## How it works
+`npm install` refreshes the Three.js package used to build `vendor/`. The page itself loads the vendored files, so after that folder exists a static server is enough.
 
-Each game is 8 rounds. The blue shape is already the real size: a 1.8 m person on some rounds, and another object on the others. Drag the handle on the red shape to scale it, or nudge it with the arrow keys, then lock in your guess.
+## Modes
 
-The score uses the ratio of your scale to the real size:
+- **Practice** — unlimited rounds, elapsed time only.
+- **5-Round Challenge** — five scenes, 90 seconds each, score out of 5,000.
+- **Daily Challenge** — the same five scenes for a UTC date. One official result is stored in this browser.
+- **Training** — eight rounds that move from simple shapes to harder light and silhouettes.
 
-`100 × 0.5 ^ |log2(guess / actual)|`
+Shadow Duel is not playable yet. `js/duel.js` can rebuild one shared scene from a seed and compare two scores when a second player exists.
 
-An exact match is 100. Twice as big or half as big is 50. Four times off is 25. Your best total out of 800 is saved in this browser.
+## Score
+
+Guesses are converted to meters. If `A` is the actual height and `G` is the guess:
+
+`score = round(1000 × exp(−4 × |ln(G / A)|))`
+
+An exact guess scores 1000. Being proportionally high or low by the same ratio scores the same. Results, a side-view diagram, and your averages stay on this device.
