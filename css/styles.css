@@ -83,7 +83,7 @@ header {
 
 #startScreen, #resultsScreen {
   width: min(640px, calc(100% - 32px));
-  margin: 24px auto;
+  margin: auto;
   background: var(--paper);
   color: var(--ink);
   border-radius: 28px;

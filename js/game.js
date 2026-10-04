@@ -56,7 +56,9 @@ let drag = null;
 
 function readBest() {
   try {
-    const value = Number(localStorage.getItem(BEST_KEY));
+    const raw = localStorage.getItem(BEST_KEY);
+    if (raw === null) return null;
+    const value = Number(raw);
     return Number.isFinite(value) ? value : null;
   } catch (error) {
     return null;
