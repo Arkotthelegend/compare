@@ -252,6 +252,8 @@ h1 {
   vector-effect: non-scaling-stroke;
 }
 
+#ghost svg .detail { display: none !important; }
+
 #hit {
   z-index: 5;
   touch-action: none;
