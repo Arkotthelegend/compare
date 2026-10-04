@@ -43,6 +43,7 @@ const state = {
   phase: "start",
   rounds: [],
   index: 0,
+  reference: PERSON,
   object: null,
   guess: 1,
   displayMeters: 1,
@@ -166,9 +167,22 @@ function randomStart(actual) {
   return meters;
 }
 
-function questionFor(spec) {
-  const how = spec.measure === "length" ? "long" : "tall";
-  return `How ${how} is ${spec.noun}?`;
+function questionFor(target, reference) {
+  const how = target.measure === "length" ? "long" : "tall";
+  if (reference.id === "person") return `How ${how} is ${target.noun}?`;
+  return `How ${how} is ${target.noun} next to ${reference.noun}?`;
+}
+
+function buildRounds() {
+  const pool = shuffle(OBJECTS);
+  const rounds = [];
+  for (let i = 0; i < 4; i += 1) {
+    rounds.push({ reference: PERSON, target: pool[i] });
+  }
+  for (let i = 4; i + 1 < pool.length && rounds.length < ROUND_COUNT; i += 2) {
+    rounds.push({ reference: pool[i], target: pool[i + 1] });
+  }
+  return shuffle(rounds);
 }
 
 function setPhase(phase) {
@@ -209,7 +223,8 @@ function layout() {
   if (availW < 20 || availH < 20 || !state.object) return;
 
   const showGhost = state.phase === "reveal";
-  const personBox = dimsFor(PERSON, PERSON.meters);
+  const reference = state.reference || PERSON;
+  const personBox = dimsFor(reference, reference.meters);
   const objectBox = dimsFor(state.object, state.displayMeters);
   const ghostBox = showGhost ? dimsFor(state.object, state.lockedGuess) : null;
   const objectSpanW = Math.max(objectBox.w, ghostBox ? ghostBox.w : 0);
@@ -275,7 +290,7 @@ function layout() {
 
   stageEl.setAttribute(
     "aria-label",
-    `${state.object.title} scaled next to a 1.8 meter person. Current scale ${formatSize(state.guess)}.`
+    `${state.object.title} scaled next to ${reference.title}, shown at ${formatSize(reference.meters)}. Current scale ${formatSize(state.guess)}.`
   );
 }
 
@@ -310,14 +325,21 @@ function renderObjectArt() {
 
 function beginRound() {
   state.animToken += 1;
-  state.object = state.rounds[state.index];
+  const round = state.rounds[state.index];
+  state.reference = round.reference;
+  state.object = round.target;
   state.lockedGuess = null;
   setPhase("play");
-  questionEl.textContent = questionFor(state.object);
-  measureHintEl.textContent = state.object.hint;
+  questionEl.textContent = questionFor(state.object, state.reference);
+  measureHintEl.textContent = state.reference.id === "person"
+    ? state.object.hint
+    : `${state.object.hint}. ${state.reference.title} is shown at its real size.`;
   roundLabelEl.textContent = `Round ${state.index + 1} / ${ROUND_COUNT}`;
   readoutCaptionEl.textContent = "your scale";
+  personLabelEl.textContent = `${state.reference.title} (${formatSize(state.reference.meters)})`;
   objectLabelEl.textContent = state.object.title;
+  personEl.innerHTML = svgMarkup(state.reference);
+  personEl.style.color = "#4da3ff";
   helpEl.hidden = false;
   revealCardEl.hidden = true;
   lockBtn.hidden = false;
@@ -419,7 +441,7 @@ function nextRound() {
 }
 
 function startGame() {
-  state.rounds = shuffle(OBJECTS).slice(0, ROUND_COUNT);
+  state.rounds = buildRounds();
   state.index = 0;
   state.total = 0;
   state.results = [];
@@ -483,9 +505,6 @@ document.addEventListener("keydown", (event) => {
 });
 
 bindHandle(handleEl);
-
-personEl.innerHTML = svgMarkup(PERSON);
-personEl.style.color = PERSON.color;
 
 new ResizeObserver(() => layout()).observe(stageEl);
 
