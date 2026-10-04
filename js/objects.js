@@ -1,27 +1,19 @@
 const SILHOUETTE = "#ff2d2d";
 
 const PERSON = {
+  id: "person",
+  title: "Person",
+  noun: "a person",
   meters: 1.8,
   axis: "height",
-  viewBox: "0 0 60 200",
+  measure: "height",
+  viewBox: "0 0 100 280",
   color: "#4da3ff",
   shape: `
-    <ellipse cx="32" cy="16" rx="13" ry="16"/>
-    <path d="
-      M22 28
-      C16 36 14 50 18 62
-      C12 74 10 98 14 118
-      L8 200
-      H22
-      L28 152
-      L32 200
-      H46
-      L40 144
-      C50 128 54 100 48 76
-      L42 60
-      C46 48 44 34 38 28
-      Z
-    "/>
+    <path d="M62 0 L70 2 L76 8 L80 18 L80 28 L76 38 L68 46 L58 50 L52 44 L48 38 L46 34 L40 32 L46 28 L52 18 L56 8 L60 2 Z"/>
+    <path d="M46 50 L34 62 L30 100 L36 136 L50 148 L74 146 L84 124 L88 90 L80 64 L64 50 Z"/>
+    <path d="M34 72 L20 92 L16 142 L28 158 L36 150 L30 112 L44 82 Z"/>
+    <path d="M40 140 L28 262 L20 262 L18 280 L40 280 L42 264 L46 200 L50 264 L48 280 L68 280 L70 262 L60 140 L72 140 L80 262 L76 280 L96 280 L98 262 L84 140 Z"/>
   `,
 };
 
