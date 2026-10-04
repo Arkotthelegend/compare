@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#152235">
+  <title>SHADOW</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%23152235' width='32' height='32'/%3E%3Ccircle cx='22' cy='8' r='3' fill='%2300EDFF'/%3E%3Cpath d='M8 26 V10 h6 v16' fill='%23e8eef5'/%3E%3Cpath d='M14 26 L24 26 L22 14 Z' fill='%2300EDFF' opacity='.85'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Outfit:wght@400;560;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/addons/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brandline">
+        <p class="brand">Shadow</p>
+        <button id="menuBtn" type="button" hidden>Menu</button>
+      </div>
+      <p class="meta" id="roundLabel"></p>
+      <p class="meta scoreline"><span id="scoreLabel"></span><span id="timerLabel"></span></p>
+    </header>
+
+    <section id="homeScreen">
+      <p class="eyebrow">A light. An object. A shadow.</p>
+      <h1>SHADOW</h1>
+      <p class="lede">How tall is it? Orbit the scene, read the shadow, and estimate the real height.</p>
+      <div class="modes">
+        <button class="mode" type="button" data-mode="practice">
+          <strong>Practice</strong>
+          <span>Unlimited rounds. No clock. Learn the light.</span>
+        </button>
+        <button class="mode" type="button" data-mode="challenge">
+          <strong>5-Round Challenge</strong>
+          <span>Five scenes. Up to 5,000 points.</span>
+        </button>
+        <button class="mode" type="button" data-mode="daily">
+          <strong>Daily Challenge</strong>
+          <span>The same five scenes for everyone today. One official result.</span>
+        </button>
+        <button class="mode" type="button" data-mode="training">
+          <strong>Training</strong>
+          <span>Eight rounds. The lighting and the shapes get harder.</span>
+        </button>
+      </div>
+      <aside class="duel">
+        <p class="eyebrow">Later</p>
+        <h2>Shadow Duel</h2>
+        <p>Two players will share one scene, estimate in private, and reveal together. That match is not live. Scenes can already be rebuilt from a seed so both sides see the same light.</p>
+      </aside>
+      <button class="textlink" id="profileBtn" type="button" hidden>Your visual profile</button>
+      <p class="fine">Grid squares and the slim post are 1 m. The glowing orb is the light. The camera only changes your view.</p>
+    </section>
+
+    <section id="playScreen" hidden>
+      <div id="stage">
+        <canvas id="view" aria-label="3D scene. Drag to orbit, scroll or pinch to zoom."></canvas>
+        <p id="stageStatus" role="status">Preparing the scene</p>
+        <button id="resetCam" type="button">Reset view</button>
+      </div>
+      <div class="dock">
+        <div id="playDock">
+          <h1 id="question">How tall is this object?</h1>
+          <form id="guessForm">
+            <div class="guess-row">
+              <label class="visually-hidden" for="guessInput">Height</label>
+              <input id="guessInput" name="height" type="text" inputmode="decimal" autocomplete="off" placeholder="Height" maxlength="8">
+              <label class="visually-hidden" for="unitSelect">Unit</label>
+              <select id="unitSelect" name="unit">
+                <option value="cm">cm</option>
+                <option value="m">m</option>
+              </select>
+            </div>
+            <p id="formError" role="alert"></p>
+            <button class="primary" id="submitBtn" type="submit">Submit guess</button>
+          </form>
+          <p class="fine">Drag to look around. Pinch or scroll to zoom. The object does not change size when you move.</p>
+        </div>
+        <div id="resultDock" hidden>
+          <p class="round-score" id="roundScore">0 / 1000</p>
+          <p id="guessLine"></p>
+          <p id="actualLine"></p>
+          <p id="diffLine"></p>
+          <p id="errorLine"></p>
+          <div class="bars" aria-hidden="true">
+            <div class="bar-col">
+              <span>Guess</span>
+              <div class="track"><div id="guessBar"></div></div>
+              <em id="guessBarLabel"></em>
+            </div>
+            <div class="bar-col">
+              <span>Actual</span>
+              <div class="track"><div id="actualBar"></div></div>
+              <em id="actualBarLabel"></em>
+            </div>
+          </div>
+          <div id="solutionPanel" hidden>
+            <svg id="solutionSvg" role="img" aria-label="Side view of the light, object, and shadow"></svg>
+            <p id="solutionCopy"></p>
+          </div>
+          <div class="actions">
+            <button class="primary" id="nextBtn" type="button">Next round</button>
+            <button class="ghost" id="solutionBtn" type="button">View solution</button>
+            <button class="ghost" id="againBtn" type="button">Play again</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="summaryScreen" hidden>
+      <p class="eyebrow">Session</p>
+      <p id="summaryScore">0</p>
+      <p id="summarySub"></p>
+      <p id="summaryBlurb"></p>
+      <pre id="summaryCard"></pre>
+      <p id="copyNote"></p>
+      <ol class="recap" id="recap"></ol>
+      <div class="actions">
+        <button class="primary" id="copyBtn" type="button">Copy result</button>
+        <button class="ghost" id="summaryAgain" type="button">Play again</button>
+        <button class="ghost" id="dailyReplay" type="button" hidden>Replay for practice</button>
+        <button class="ghost" id="summaryHome" type="button">Menu</button>
+      </div>
+    </section>
+
+    <section id="profileScreen" hidden>
+      <p class="eyebrow">After the rounds you have played</p>
+      <h1>Your visual profile</h1>
+      <div id="profileBody"></div>
+      <div class="actions">
+        <button class="primary" id="profileContinue" type="button" hidden>Continue</button>
+        <button class="ghost" id="profileHome" type="button">Menu</button>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

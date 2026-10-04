@@ -1,0 +1,13 @@
+{
+  "name": "shadow",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "test": "node --test tests/*.test.mjs",
+    "vendor": "mkdir -p vendor/three/addons/controls && cp node_modules/three/build/three.module.js vendor/three/three.module.js && cp node_modules/three/examples/jsm/controls/OrbitControls.js vendor/three/addons/controls/OrbitControls.js"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  }
+}
