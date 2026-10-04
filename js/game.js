@@ -243,7 +243,6 @@ function layout() {
 
   const objectTop = stageEl.clientHeight - ground - objectH;
   const objectCenter = objectLeft + objectW / 2;
-  state.anchor = { x: objectLeft, y: objectTop + objectH };
 
   const handleSize = 40;
   const primary = state.object.axis === "height" ? objectH : objectW;
@@ -429,23 +428,25 @@ function startGame() {
 
 function bindHandle(el) {
   el.addEventListener("pointerdown", (event) => {
-    if (state.phase !== "play" || !state.anchor) return;
+    if (state.phase !== "play") return;
     if (event.button !== undefined && event.button !== 0) return;
     event.preventDefault();
     el.setPointerCapture(event.pointerId);
-    const dist = Math.hypot(event.clientX - state.anchor.x, event.clientY - state.anchor.y);
     drag = {
       pointerId: event.pointerId,
-      anchorX: state.anchor.x,
-      anchorY: state.anchor.y,
-      startDist: Math.max(24, dist),
+      x: event.clientX,
+      y: event.clientY,
       guess: state.guess,
     };
   });
   el.addEventListener("pointermove", (event) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const dist = Math.hypot(event.clientX - drag.anchorX, event.clientY - drag.anchorY);
-    setGuess(drag.guess * (dist / drag.startDist));
+    const diag = ((event.clientX - drag.x) + (drag.y - event.clientY)) / 2;
+    const sign = Math.sign(diag);
+    const mag = Math.abs(diag);
+    const knee = 48;
+    const scaled = mag < knee ? mag / 58 : knee / 58 + (mag - knee) / 22;
+    setGuess(drag.guess * Math.exp(sign * scaled));
   });
   const end = (event) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
