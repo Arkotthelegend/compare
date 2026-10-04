@@ -34,6 +34,7 @@
       <p class="eyebrow">A light. An object. A shadow.</p>
       <h1>SHADOW</h1>
       <p class="lede">How tall is it? Orbit the scene, read the shadow, and estimate the real height.</p>
+      <p id="bootError" class="boot-error" hidden>The game could not start. In this folder run npm start, then open http://localhost:4173. Opening the file directly blocks the buttons.</p>
       <div class="modes">
         <button class="mode" type="button" data-mode="practice">
           <strong>Practice</strong>
@@ -142,6 +143,12 @@
       </div>
     </section>
   </div>
-  <script type="module" src="js/main.js"></script>
+  <script type="module">
+    import("./js/main.js").catch(() => {
+      const banner = document.querySelector("#bootError");
+      if (!banner) return;
+      banner.hidden = false;
+    });
+  </script>
 </body>
 </html>
