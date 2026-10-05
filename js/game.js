@@ -4,9 +4,11 @@ import { equilibriumAngle, isSettled, moment, stepRotation } from "./physics.js"
 import { dailyKey, dailySeed, mulberry32 } from "./rng.js";
 import { scoreAttempt, starsFor, verdict, verdictCopy } from "./score.js";
 
-const VIEW_W = 1000;
 const VIEW_H = 520;
 const BEAM_Y = 220;
+const BOARD_MARGIN = 88;
+const PIXELS_PER_METRE = 44;
+const PLACE_STEP = 0.1;
 const PROGRESS_KEY = "balance-progress-v1";
 
 const svg = document.querySelector("#board");
@@ -87,11 +89,12 @@ function show(screen) {
 
 function layout() {
   const challenge = state.challenge;
-  const margin = 64;
-  const ppm = Math.min(82, (VIEW_W - margin * 2) / challenge.length);
+  const ppm = PIXELS_PER_METRE;
+  const viewW = BOARD_MARGIN * 2 + challenge.length * ppm;
   return {
     ppm,
-    pivotX: margin + challenge.pivotFromLeft * ppm,
+    viewW,
+    pivotX: BOARD_MARGIN + challenge.pivotFromLeft * ppm,
     beamY: BEAM_Y,
     left: -challenge.pivotFromLeft,
     right: challenge.length - challenge.pivotFromLeft,
@@ -116,8 +119,9 @@ function formatLoad(value) {
 }
 
 function readableSize(desiredPx) {
-  const width = svg.clientWidth || 360;
-  return Math.min(40, Math.max(16, (desiredPx * VIEW_W) / width));
+  const { viewW } = layout();
+  const width = svg.clientWidth || viewW;
+  return Math.min(18, Math.max(12, (desiredPx * viewW) / Math.max(width, 1)));
 }
 
 function svgPoint(event) {
@@ -143,9 +147,8 @@ function beamLocal(point) {
 }
 
 function snapMeters(meters) {
-  const step = state.challenge.snap;
   const { left, right } = layout();
-  const snapped = Math.round(meters / step) * step;
+  const snapped = Math.round(meters / PLACE_STEP) * PLACE_STEP;
   return Math.min(right, Math.max(left, Math.round(snapped * 1000) / 1000));
 }
 
@@ -213,7 +216,9 @@ function shapeNode(object, pixels) {
 }
 
 function drawStatic() {
-  const { ppm, pivotX, beamY, left, right } = layout();
+  const { ppm, pivotX, beamY, left, right, viewW } = layout();
+  svg.setAttribute("viewBox", `0 0 ${viewW} ${VIEW_H}`);
+  svg.style.width = `${viewW}px`;
   const challenge = state.challenge;
   scaleLayer.replaceChildren();
   fulcrumLayer.replaceChildren();
@@ -294,10 +299,11 @@ function pieceTransform(object, node) {
     const y = beamY + along * s - lift * c;
     return `translate(${x} ${y}) rotate(${(state.angle * 180) / Math.PI})`;
   }
+  const { viewW, pivotX: trayPivot } = layout();
   const tray = state.objects.filter((item) => !item.placed);
   const index = tray.findIndex((item) => item.id === object.id);
-  const gap = Math.min(150, (VIEW_W - 120) / Math.max(tray.length, 1));
-  const x = VIEW_W / 2 + (index - (tray.length - 1) / 2) * gap;
+  const gap = Math.min(150, (viewW - 120) / Math.max(tray.length, 1));
+  const x = trayPivot + (index - (tray.length - 1) / 2) * gap;
   return `translate(${x} ${VIEW_H - 28 - height / 2})`;
 }
 
@@ -433,7 +439,15 @@ function beginChallenge(challenge) {
   dragReadout.textContent = "";
   show("play");
   render();
+  centerBoard();
   startLoop();
+}
+
+function centerBoard() {
+  const scroller = document.querySelector("#boardScroll");
+  if (!scroller) return;
+  const { pivotX } = layout();
+  scroller.scrollLeft = Math.max(0, pivotX - scroller.clientWidth / 2);
 }
 
 function startMode(mode) {
