@@ -1,5 +1,5 @@
 import { createAudio } from "./audio.js";
-import { createChallenge, classicSeed, difficultyForIndex, endlessSeed } from "./levels.js";
+import { createChallenge, classicSeed, describeChallenge, difficultyForIndex, endlessSeed } from "./levels.js";
 import { equilibriumAngle, isSettled, moment, stepRotation } from "./physics.js";
 import { dailyKey, dailySeed, mulberry32 } from "./rng.js";
 import { scoreAttempt, starsFor, verdict, verdictCopy } from "./score.js";
@@ -98,6 +98,11 @@ function layout() {
   };
 }
 
+function formatKg(value) {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 function formatMeters(value) {
   const signed = Math.round(value * 10) / 10;
   const body = Math.abs(signed).toFixed(1);
@@ -161,9 +166,14 @@ function separate(objects) {
       const need = (prev.size + current.size) / 2 + 0.12;
       const gap = current.s - prev.s;
       if (gap < need) {
-        const push = (need - gap) / 2;
-        prev.s = clampToBoard(prev, prev.s - push);
-        current.s = clampToBoard(current, current.s + push);
+        if (prev.locked && current.locked) continue;
+        if (prev.locked) current.s = clampToBoard(current, prev.s + need);
+        else if (current.locked) prev.s = clampToBoard(prev, current.s - need);
+        else {
+          const push = (need - gap) / 2;
+          prev.s = clampToBoard(prev, prev.s - push);
+          current.s = clampToBoard(current, current.s + push);
+        }
       }
     }
   }
@@ -193,7 +203,9 @@ function shapeNode(object, pixels) {
   label.setAttribute("class", "mass-label");
   label.setAttribute("y", String(-height / 2 - 10));
   label.setAttribute("font-size", String(readableSize(15)));
-  label.textContent = `${object.weight} kg`;
+  label.textContent = object.altWeight != null
+    ? `${formatKg(object.weight)} or ${formatKg(object.altWeight)}`
+    : `${formatKg(object.weight)} kg`;
   node.append(body, label);
   node.dataset.width = String(width);
   node.dataset.height = String(height);
@@ -289,6 +301,12 @@ function pieceTransform(object, node) {
   return `translate(${x} ${VIEW_H - 28 - height / 2})`;
 }
 
+function pieceClass(object) {
+  const selected = state.drag && state.drag.id === object.id ? " selected" : "";
+  const locked = object.locked ? " locked" : "";
+  return `piece${selected}${locked}`;
+}
+
 function drawPieces() {
   const { ppm } = layout();
   pieceLayer.replaceChildren();
@@ -296,7 +314,7 @@ function drawPieces() {
     const pixels = Math.max(46, object.size * ppm);
     const node = shapeNode(object, pixels);
     node.dataset.id = object.id;
-    node.setAttribute("class", state.drag && state.drag.id === object.id ? "piece selected" : "piece");
+    node.setAttribute("class", pieceClass(object));
     node.setAttribute("transform", pieceTransform(object, node));
     pieceLayer.append(node);
   });
@@ -308,7 +326,7 @@ function updateTransforms() {
     const object = state.objects.find((item) => item.id === node.dataset.id);
     if (!object) return;
     node.setAttribute("transform", pieceTransform(object, node));
-    node.setAttribute("class", state.drag && state.drag.id === object.id ? "piece selected" : "piece");
+    node.setAttribute("class", pieceClass(object));
   });
   const calm = Math.abs(moment(state.objects)) <= state.challenge.tolerance && Math.abs(state.angle) < 0.06;
   beamLayer.classList.toggle("calm", calm && state.objects.some((object) => object.placed));
@@ -353,7 +371,7 @@ function updateHud() {
   } else {
     timerLabel.textContent = "";
   }
-  hintLabel.textContent = state.challenge.hint || "Drag every weight onto the beam. Distance is measured from the pivot.";
+  hintLabel.textContent = describeChallenge(state.challenge);
 }
 
 function render() {
@@ -398,7 +416,11 @@ function frame(now) {
 
 function beginChallenge(challenge) {
   state.challenge = challenge;
-  state.objects = challenge.objects.map((object) => ({ ...object, placed: false, s: null }));
+  state.objects = challenge.objects.map((object) => ({
+    ...object,
+    placed: Boolean(object.locked),
+    s: object.locked ? object.s : null,
+  }));
   state.angle = 0;
   state.omega = 0;
   state.phase = "play";
@@ -422,7 +444,7 @@ function startMode(mode) {
     const saved = loadProgress();
     state.level = mode === "classic" ? saved.classicLevel || 1 : saved.perfectLevel || 1;
     const level = createChallenge(classicSeed(state.level), state.level);
-    if (mode === "perfect") level.tolerance = 0.08;
+    if (mode === "perfect") level.tolerance = Math.min(level.tolerance, 0.05);
     beginChallenge(level);
     return;
   }
@@ -447,9 +469,7 @@ function startMode(mode) {
       showSummary("Daily challenge", `Today is already saved.\nScore ${saved.score}\nTorque difference ${saved.difference.toFixed(2)} kg·m`);
       return;
     }
-    const level = createChallenge(dailySeed(new Date()), 14);
-    level.hint = `Daily challenge ${key}. Everyone has this same seesaw today.`;
-    beginChallenge(level);
+    beginChallenge(createChallenge(dailySeed(new Date()), 18));
   }
 }
 
@@ -462,7 +482,7 @@ function objectFromEvent(event) {
 function onPointerDown(event) {
   if (state.phase !== "play") return;
   const object = objectFromEvent(event);
-  if (!object) return;
+  if (!object || object.locked) return;
   event.preventDefault();
   const point = svgPoint(event);
   state.drag = { id: object.id, pointerId: event.pointerId, x: point.x, y: point.y };
@@ -523,14 +543,25 @@ function checkBalance() {
   startLoop();
 }
 
+function checkSamples() {
+  const base = moment(state.objects, "base");
+  const alt = moment(state.objects, "alt");
+  if (state.objects.some((object) => object.altWeight != null) && Math.abs(base - alt) > 0.001) return [base, alt];
+  return [base];
+}
+
 function finishCheck() {
-  const difference = moment(state.objects);
+  const samples = checkSamples();
+  const difference = samples.reduce((worst, value) => (Math.abs(value) > Math.abs(worst) ? value : worst), 0);
   const tolerance = state.challenge.tolerance;
   const seconds = (performance.now() - state.startedAt) / 1000;
-  const kind = verdict(difference, tolerance);
-  const passed = kind === "perfect" || kind === "balanced" || (kind === "close" && state.mode !== "perfect");
-  const perfectPassed = state.mode !== "perfect" || kind === "perfect" || kind === "balanced";
-  const success = state.mode === "perfect" ? perfectPassed && Math.abs(difference) <= tolerance : passed;
+  const kinds = samples.map((value) => verdict(value, tolerance));
+  const order = ["perfect", "balanced", "close", "failed"];
+  const kind = kinds.sort((a, b) => order.indexOf(b) - order.indexOf(a))[0];
+  const success = samples.every((value) => {
+    const sampleKind = verdict(value, tolerance);
+    return sampleKind === "perfect" || sampleKind === "balanced";
+  });
   const score = scoreAttempt({
     difference,
     tolerance,
@@ -586,7 +617,10 @@ function showResult(kind, difference, stars, seconds) {
   state.objects.forEach((object) => {
     const row = document.createElement("p");
     const load = object.weight * object.s;
-    row.textContent = `${object.weight} kg × ${formatMeters(object.s)} = ${formatLoad(Math.abs(load))}`;
+    const name = object.altWeight != null
+      ? `${formatKg(object.weight)} or ${formatKg(object.altWeight)} kg`
+      : `${formatKg(object.weight)} kg`;
+    row.textContent = `${name} × ${formatMeters(object.s)} = ${formatLoad(Math.abs(load))}`;
     if (object.s < 0) groups.left.push(row);
     else groups.right.push(row);
   });
@@ -597,8 +631,11 @@ function showResult(kind, difference, stars, seconds) {
   rightTitle.className = "math-label";
   rightTitle.textContent = "Right";
   resultMath.append(leftTitle, ...groups.left, rightTitle, ...groups.right);
+  const samples = checkSamples();
   const differenceLine = document.createElement("p");
-  differenceLine.textContent = `Difference ${formatLoad(Math.abs(difference))}`;
+  differenceLine.textContent = samples.length === 2
+    ? `Differences ${formatLoad(Math.abs(samples[0]))} and ${formatLoad(Math.abs(samples[1]))}`
+    : `Difference ${formatLoad(Math.abs(difference))}`;
   resultMath.append(differenceLine);
   resultMeta.textContent = `Score ${state.levelScore} · ${seconds.toFixed(0)} s · ${state.moves} moves`;
   starsEl.textContent = `${stars.balanced ? "★" : "☆"} Balanced  ${stars.precise ? "★" : "☆"} Precise  ${stars.fast ? "★" : "☆"} Fast`;
@@ -612,7 +649,7 @@ function nextChallenge() {
   if (state.mode === "classic" || state.mode === "perfect") {
     state.level += 1;
     const level = createChallenge(classicSeed(state.level), state.level);
-    if (state.mode === "perfect") level.tolerance = 0.08;
+    if (state.mode === "perfect") level.tolerance = Math.min(level.tolerance, 0.05);
     beginChallenge(level);
     return;
   }

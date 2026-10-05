@@ -74,6 +74,23 @@ test("off-center pivot still uses distance from the pivot", () => {
   assert.ok(Math.abs(moment(solved)) < 0.03);
 });
 
+test("later levels are stricter and include a lock or a split weight", () => {
+  let locks = 0;
+  let splits = 0;
+  for (let level = 3; level <= 24; level += 1) {
+    const challenge = createChallenge(classicSeed(level), level);
+    assert.ok(challenge.objects.length >= 3);
+    assert.ok(challenge.tolerance <= 0.16);
+    assert.equal(isSolvable(challenge), true);
+    if (challenge.solution.some((object) => object.locked)) locks += 1;
+    if (challenge.solution.some((object) => object.altWeight != null)) splits += 1;
+    const alt = challenge.solution.reduce((sum, object) => sum + (object.altWeight ?? object.weight) * object.s, 0);
+    assert.ok(Math.abs(alt) <= challenge.tolerance + 0.001);
+  }
+  assert.ok(locks >= 4);
+  assert.ok(splits >= 4);
+});
+
 test("every classic level through 40 is solvable and reproducible", () => {
   for (let level = 1; level <= 40; level += 1) {
     const first = createChallenge(classicSeed(level), level);

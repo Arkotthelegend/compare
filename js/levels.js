@@ -15,16 +15,24 @@ function reachFor(length, pivotFromLeft, sign) {
   return sign < 0 ? pivotFromLeft - 0.45 : length - pivotFromLeft - 0.45;
 }
 
-function pickWeight(rng, hard) {
-  const pool = hard ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5, 6, 8];
+function pickWeight(rng, halves) {
+  const pool = halves
+    ? [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9]
+    : [1, 2, 3, 4, 5, 6, 7, 8];
   return pool[Math.floor(rng() * pool.length)];
 }
 
+function quantizeWeight(value, halves) {
+  const quantum = halves ? 0.5 : 1;
+  return Math.round(Math.round(value / quantum) * quantum * 10) / 10;
+}
+
 function settingsFor(level) {
-  if (level <= 5) return { snap: 1, tolerance: 0.45, count: 2, hard: false, shiftPivot: false, par: 25 };
-  if (level <= 15) return { snap: 0.5, tolerance: 0.3, count: level < 10 ? 3 : 3, hard: false, shiftPivot: false, par: 40 };
-  if (level <= 30) return { snap: 0.5, tolerance: 0.18, count: 4, hard: true, shiftPivot: true, par: 55 };
-  return { snap: 0.5, tolerance: 0.1, count: 5, hard: true, shiftPivot: true, par: 70 };
+  if (level <= 4) return { snap: 0.5, tolerance: 0.16, count: 3, halves: false, shiftPivot: false, anchor: false, chance: false, par: 40 };
+  if (level <= 8) return { snap: 0.5, tolerance: 0.1, count: 3, halves: true, shiftPivot: level >= 6, anchor: false, chance: true, par: 50 };
+  if (level <= 16) return { snap: 0.5, tolerance: 0.08, count: 4, halves: true, shiftPivot: true, anchor: true, chance: true, par: 60 };
+  if (level <= 30) return { snap: 0.25, tolerance: 0.06, count: 4, halves: true, shiftPivot: true, anchor: true, chance: true, par: 70 };
+  return { snap: 0.25, tolerance: 0.04, count: 5, halves: true, shiftPivot: true, anchor: true, chance: true, par: 80 };
 }
 
 function emptyChallenge(partial) {
@@ -77,24 +85,34 @@ function tryBuild(rng, level) {
   const length = 10;
   let pivotFromLeft = 5;
   if (settings.shiftPivot) {
-    const options = [];
-    for (let pivot = 3; pivot <= 7; pivot += 0.5) options.push(pivot);
+    const options = [3, 3.5, 4, 4.5, 6, 6.5, 7];
     pivotFromLeft = options[Math.floor(rng() * options.length)];
   }
   const placed = [];
   const objects = [];
+  if (settings.chance) {
+    const pairs = [[2, 5], [1, 4], [3, 6], [1.5, 4.5], [2.5, 6.5]];
+    const pair = pairs[Math.floor(rng() * pairs.length)];
+    const size = sizeForWeight(pair[1]);
+    if (!overlaps(0, size, placed)) {
+      const chance = { weight: pair[0], altWeight: pair[1], size, s: 0, chance: true };
+      placed.push(chance);
+      objects.push(chance);
+    }
+  }
   const count = settings.count;
   const free = count - 1;
   for (let index = 0; index < free; index += 1) {
     const sign = index % 2 === 0 ? -1 : 1;
     const maxReach = reachFor(length, pivotFromLeft, sign);
     let stored = null;
-    for (let attempt = 0; attempt < 24; attempt += 1) {
-      const weight = pickWeight(rng, settings.hard);
+    for (let attempt = 0; attempt < 28; attempt += 1) {
+      const weight = pickWeight(rng, settings.halves);
       const size = sizeForWeight(weight);
       const steps = Math.max(1, Math.floor((maxReach - size / 2) / settings.snap));
       const dist = settings.snap * (1 + Math.floor(rng() * steps));
       const s = snapValue(sign * dist, settings.snap);
+      if (Math.abs(s) < settings.snap / 2) continue;
       if (Math.abs(s) + size / 2 > maxReach + 0.45) continue;
       if (overlaps(s, size, placed)) continue;
       stored = { weight, size, s };
@@ -113,10 +131,9 @@ function tryBuild(rng, level) {
   const options = [];
   for (let dist = settings.snap; dist <= maxReach - 0.2; dist += settings.snap) {
     const s = snapValue(sign * dist, settings.snap);
-    const weight = target / s;
-    const rounded = Math.round(weight);
-    if (rounded < 1 || rounded > (settings.hard ? 12 : 8)) continue;
-    if (Math.abs(weight - rounded) > 0.001) continue;
+    const rounded = quantizeWeight(target / s, settings.halves);
+    if (rounded < 1 || rounded > 12) continue;
+    if (Math.abs(target / s - rounded) > 0.001) continue;
     const size = sizeForWeight(rounded);
     if (overlaps(s, size, placed)) continue;
     options.push({ weight: rounded, size, s });
@@ -126,6 +143,17 @@ function tryBuild(rng, level) {
 
   const moment = objects.reduce((sum, object) => sum + object.weight * object.s, 0);
   if (Math.abs(moment) > 0.02) return null;
+  const spread = objects.some((object) => object.altWeight != null)
+    ? objects.reduce((sum, object) => sum + (object.altWeight ?? object.weight) * object.s, 0)
+    : moment;
+  if (Math.abs(spread) > settings.tolerance) return null;
+
+  if (settings.anchor) {
+    const candidates = objects.filter((object) => !object.chance && Math.abs(object.s) >= 1);
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => Math.abs(b.weight * b.s) - Math.abs(a.weight * a.s));
+    candidates[0].locked = true;
+  }
 
   return emptyChallenge({
     id: `level-${level}`,
@@ -138,11 +166,19 @@ function tryBuild(rng, level) {
       id: `o${index + 1}`,
       shape: SHAPES[Math.floor(rng() * SHAPES.length)],
       weight: object.weight,
+      altWeight: object.altWeight ?? null,
       size: object.size,
-      s: null,
+      locked: Boolean(object.locked),
+      s: object.locked ? object.s : null,
       guide: null,
     })),
-    solution: objects.map((object) => ({ weight: object.weight, s: object.s, size: object.size })),
+    solution: objects.map((object) => ({
+      weight: object.weight,
+      altWeight: object.altWeight ?? null,
+      s: object.s,
+      size: object.size,
+      locked: Boolean(object.locked),
+    })),
   });
 }
 
@@ -171,8 +207,9 @@ export function createChallenge(seed, level) {
 
 export function isSolvable(challenge) {
   if (!challenge.solution) return Boolean(scriptedLevel(challenge.level));
-  const moment = challenge.solution.reduce((sum, object) => sum + object.weight * object.s, 0);
-  if (Math.abs(moment) > 0.02) return false;
+  const base = challenge.solution.reduce((sum, object) => sum + object.weight * object.s, 0);
+  const alt = challenge.solution.reduce((sum, object) => sum + (object.altWeight ?? object.weight) * object.s, 0);
+  if (Math.abs(base) > 0.02 || Math.abs(alt) > challenge.tolerance + 0.001) return false;
   const ordered = [...challenge.solution].sort((a, b) => a.s - b.s);
   for (let index = 1; index < ordered.length; index += 1) {
     const gap = ordered[index].s - ordered[index - 1].s;
@@ -180,6 +217,14 @@ export function isSolvable(challenge) {
     if (gap < need) return false;
   }
   return true;
+}
+
+export function describeChallenge(challenge) {
+  if (challenge.hint) return challenge.hint;
+  const notes = [];
+  if (challenge.objects.some((object) => object.locked)) notes.push("The locked block stays put.");
+  if (challenge.objects.some((object) => object.altWeight != null)) notes.push("The split block must balance at both weights.");
+  return notes.join(" ") || "Drag every weight onto the beam. Distance is measured from the pivot.";
 }
 
 export function classicSeed(level) {
@@ -191,7 +236,5 @@ export function endlessSeed(index, salt) {
 }
 
 export function difficultyForIndex(index) {
-  if (index < 5) return index + 1;
-  if (index < 12) return 6 + (index - 5);
-  return Math.min(40, 16 + (index - 12));
+  return Math.min(42, 4 + index * 2);
 }
