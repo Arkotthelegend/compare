@@ -28,17 +28,17 @@ function quantizeWeight(value, halves) {
 }
 
 function settingsFor(level) {
-  if (level <= 4) return { snap: 0.5, tolerance: 0.16, count: 3, halves: false, shiftPivot: false, anchor: false, chance: false, par: 40 };
-  if (level <= 8) return { snap: 0.5, tolerance: 0.1, count: 3, halves: true, shiftPivot: level >= 6, anchor: false, chance: true, par: 50 };
-  if (level <= 16) return { snap: 0.5, tolerance: 0.08, count: 4, halves: true, shiftPivot: true, anchor: true, chance: true, par: 60 };
-  if (level <= 30) return { snap: 0.25, tolerance: 0.06, count: 4, halves: true, shiftPivot: true, anchor: true, chance: true, par: 70 };
-  return { snap: 0.25, tolerance: 0.04, count: 5, halves: true, shiftPivot: true, anchor: true, chance: true, par: 80 };
+  if (level <= 4) return { snap: 0.5, tolerance: 0.16, count: 3, halves: false, anchor: false, chance: false, par: 40 };
+  if (level <= 8) return { snap: 0.5, tolerance: 0.1, count: 3, halves: true, anchor: false, chance: true, par: 50 };
+  if (level <= 16) return { snap: 0.5, tolerance: 0.08, count: 4, halves: true, anchor: true, chance: true, par: 60 };
+  if (level <= 30) return { snap: 0.25, tolerance: 0.06, count: 4, halves: true, anchor: true, chance: true, par: 70 };
+  return { snap: 0.25, tolerance: 0.04, count: 5, halves: true, anchor: true, chance: true, par: 80 };
 }
 
 function emptyChallenge(partial) {
   return {
-    length: 10,
-    pivotFromLeft: 5,
+    length: 44,
+    pivotFromLeft: 22,
     snap: 1,
     tolerance: 0.45,
     par: 30,
@@ -82,12 +82,8 @@ export function scriptedLevel(level) {
 
 function tryBuild(rng, level) {
   const settings = settingsFor(level);
-  const length = 10;
-  let pivotFromLeft = 5;
-  if (settings.shiftPivot) {
-    const options = [3, 3.5, 4, 4.5, 6, 6.5, 7];
-    pivotFromLeft = options[Math.floor(rng() * options.length)];
-  }
+  const length = 44;
+  const pivotFromLeft = 22;
   const placed = [];
   const objects = [];
   if (settings.chance) {

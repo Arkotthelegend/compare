@@ -15,7 +15,7 @@ Open `http://localhost:4173`.
 
 ## Modes
 
-- **Classic** — levels 1 and 2 show where to put the blocks. Later levels use half metres, half kilograms, a locked block, and a split block that has to balance at both weights. Almost does not clear a level.
+- **Classic** — levels 1 and 2 show where to put the blocks. The scale runs from −22 m to +22 m, the same on both sides, and a block can sit on any tenth of a metre. Later levels add half kilograms, a locked block, and a split block. Almost does not clear a level.
 - **Endless** — the next challenge is harder.
 - **Time attack** — 90 seconds.
 - **Perfect** — the allowed difference is 0.08 kg·m.

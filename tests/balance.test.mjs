@@ -67,11 +67,16 @@ test("several objects and fractional distances add as weight times distance", ()
   assert.ok(inertia(objects) > 14);
 });
 
-test("off-center pivot still uses distance from the pivot", () => {
-  const challenge = createChallenge(classicSeed(18), 18);
-  assert.ok(isSolvable(challenge));
-  const solved = challenge.solution.map((object) => ({ ...object, placed: true }));
-  assert.ok(Math.abs(moment(solved)) < 0.03);
+test("both sides of the scale match and reach at least 20 metres", () => {
+  for (let level = 1; level <= 20; level += 1) {
+    const challenge = createChallenge(classicSeed(level), level);
+    assert.equal(challenge.length, challenge.pivotFromLeft * 2);
+    assert.ok(challenge.pivotFromLeft >= 20);
+    const solved = challenge.solution
+      ? challenge.solution.map((object) => ({ ...object, placed: true }))
+      : challenge.objects.map((object) => ({ ...object, placed: true, s: object.guide }));
+    if (challenge.solution) assert.ok(Math.abs(moment(solved)) < 0.03);
+  }
 });
 
 test("later levels are stricter and include a lock or a split weight", () => {

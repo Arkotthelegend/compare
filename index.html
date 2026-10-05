@@ -53,7 +53,8 @@
 
     <section id="playScreen" hidden>
       <p id="hintLabel"></p>
-      <svg id="board" viewBox="0 0 1000 520" role="img" aria-label="Seesaw. Drag weights onto the beam.">
+      <div id="boardScroll">
+      <svg id="board" viewBox="0 0 1000 520" role="img" aria-label="Seesaw. Drag weights onto the beam. Scroll sideways to see the whole scale.">
         <g id="scale"></g>
         <g id="ghosts"></g>
         <g id="fulcrum"></g>
@@ -61,6 +62,7 @@
         <g id="pieces"></g>
         <text id="dragReadout"></text>
       </svg>
+      </div>
       <div class="controls">
         <button class="primary" id="checkBtn" type="button">Check</button>
         <button class="ghost" id="retryBtn" type="button">Reset</button>
