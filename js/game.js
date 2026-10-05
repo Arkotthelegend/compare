@@ -1,6 +1,6 @@
 import { createAudio } from "./audio.js";
 import { createChallenge, classicSeed, difficultyForIndex, endlessSeed } from "./levels.js";
-import { isSettled, moment, stepRotation } from "./physics.js";
+import { equilibriumAngle, isSettled, moment, stepRotation } from "./physics.js";
 import { dailyKey, dailySeed, mulberry32 } from "./rng.js";
 import { scoreAttempt, starsFor, verdict, verdictCopy } from "./score.js";
 
@@ -170,8 +170,8 @@ function separate(objects) {
 }
 
 function shapeNode(object, pixels) {
-  const width = object.shape === "long" || object.shape === "slab" ? pixels * 1.8 : object.shape === "rect" ? pixels * 1.35 : pixels;
-  const height = object.shape === "slab" ? pixels * 0.72 : pixels;
+  const width = object.shape === "long" || object.shape === "slab" ? pixels * 1.12 : object.shape === "rect" ? pixels * 1.08 : pixels;
+  const height = object.shape === "slab" || object.shape === "long" ? pixels * 0.78 : pixels;
   const node = document.createElementNS("http://www.w3.org/2000/svg", "g");
   let body;
   if (object.shape === "circle" || object.shape === "pebble") {
@@ -384,7 +384,8 @@ function frame(now) {
       return;
     }
   }
-  const moving = Math.abs(state.omega) > 0.01 || Math.abs(state.angle) > 0.004;
+  const target = equilibriumAngle(state.objects);
+  const moving = Math.abs(state.omega) > 0.02 || Math.abs(state.angle - target) > 0.02;
   if (state.phase === "checking" && isSettled(state) && performance.now() - state.checkStarted > 350) {
     state.running = false;
     finishCheck();

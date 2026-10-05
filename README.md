@@ -2,7 +2,7 @@
 
 Place weights on a seesaw until the two sides agree.
 
-Torque is weight times distance from the pivot. A 4 kg block 2 m left of the pivot asks for 8 kg·m on the right, which might be 2 kg sitting 4 m out. Bigger blocks are not always heavier. The number on the block is the number the beam uses.
+Torque is weight times distance from the pivot. A 4 kg block 2 m left of the pivot asks for 8 kg·m on the right, which might be 2 kg sitting 4 m out. Heavier blocks are drawn larger. The number on the block is the number the beam uses.
 
 ## Play
 
