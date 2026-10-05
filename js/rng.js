@@ -22,5 +22,9 @@ export function dailyKey(date = new Date()) {
 }
 
 export function dailySeed(date = new Date()) {
-  return hashString(`shadow-daily-v1-${dailyKey(date)}`);
+  return hashString(`balance-daily-v1-${dailyKey(date)}`);
+}
+
+export function roundTo(value, step) {
+  return Math.round(value / step) * step;
 }
