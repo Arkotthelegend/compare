@@ -1,3 +1,4 @@
+import { sizeForWeight } from "./physics.js";
 import { hashString, mulberry32, roundTo } from "./rng.js";
 
 const SHAPES = ["square", "rect", "circle", "triangle", "long", "cube", "pebble", "slab"];
@@ -12,11 +13,6 @@ function overlaps(s, size, placed) {
 
 function reachFor(length, pivotFromLeft, sign) {
   return sign < 0 ? pivotFromLeft - 0.45 : length - pivotFromLeft - 0.45;
-}
-
-function pickSize(rng) {
-  const sizes = [0.42, 0.55, 0.7, 0.85, 1.05, 1.25, 1.45];
-  return sizes[Math.floor(rng() * sizes.length)];
 }
 
 function pickWeight(rng, hard) {
@@ -54,8 +50,8 @@ export function scriptedLevel(level) {
       tutorial: true,
       hint: "A light weight far from the pivot can match a heavy weight close to it.",
       objects: [
-        { id: "a", shape: "square", weight: 2, size: 0.7, s: null, guide: 4 },
-        { id: "b", shape: "cube", weight: 4, size: 0.5, s: null, guide: -2 },
+        { id: "a", shape: "square", weight: 2, size: sizeForWeight(2), s: null, guide: 4 },
+        { id: "b", shape: "cube", weight: 4, size: sizeForWeight(4), s: null, guide: -2 },
       ],
     });
   }
@@ -68,8 +64,8 @@ export function scriptedLevel(level) {
       tutorial: true,
       hint: "Equal weights balance at equal distances.",
       objects: [
-        { id: "a", shape: "circle", weight: 3, size: 0.75, s: null, guide: -2 },
-        { id: "b", shape: "circle", weight: 3, size: 0.75, s: null, guide: 2 },
+        { id: "a", shape: "circle", weight: 3, size: sizeForWeight(3), s: null, guide: -2 },
+        { id: "b", shape: "circle", weight: 3, size: sizeForWeight(3), s: null, guide: 2 },
       ],
     });
   }
@@ -94,13 +90,14 @@ function tryBuild(rng, level) {
     const maxReach = reachFor(length, pivotFromLeft, sign);
     let stored = null;
     for (let attempt = 0; attempt < 24; attempt += 1) {
-      const size = pickSize(rng);
+      const weight = pickWeight(rng, settings.hard);
+      const size = sizeForWeight(weight);
       const steps = Math.max(1, Math.floor((maxReach - size / 2) / settings.snap));
       const dist = settings.snap * (1 + Math.floor(rng() * steps));
       const s = snapValue(sign * dist, settings.snap);
       if (Math.abs(s) + size / 2 > maxReach + 0.45) continue;
       if (overlaps(s, size, placed)) continue;
-      stored = { weight: pickWeight(rng, settings.hard), size, s };
+      stored = { weight, size, s };
       break;
     }
     if (!stored) return null;
@@ -120,7 +117,7 @@ function tryBuild(rng, level) {
     const rounded = Math.round(weight);
     if (rounded < 1 || rounded > (settings.hard ? 12 : 8)) continue;
     if (Math.abs(weight - rounded) > 0.001) continue;
-    const size = pickSize(rng);
+    const size = sizeForWeight(rounded);
     if (overlaps(s, size, placed)) continue;
     options.push({ weight: rounded, size, s });
   }
