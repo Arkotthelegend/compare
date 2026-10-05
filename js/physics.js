@@ -3,11 +3,22 @@ export const BOARD_INERTIA = 14;
 export const BOARD_RESTORE = 110;
 export const MAX_ANGLE = 0.42;
 
-export function moment(objects) {
+export function variantWeight(object, variant) {
+  if (variant === "alt") return object.altWeight ?? object.weight;
+  return object.weight;
+}
+
+export function moment(objects, variant = "base") {
   return objects.reduce((sum, object) => {
     if (!object.placed) return sum;
-    return sum + object.weight * object.s;
+    return sum + variantWeight(object, variant) * object.s;
   }, 0);
+}
+
+export function controllingMoment(objects) {
+  const base = moment(objects, "base");
+  const alt = moment(objects, "alt");
+  return Math.abs(alt) > Math.abs(base) ? alt : base;
 }
 
 export function sizeForWeight(weight) {
@@ -16,22 +27,20 @@ export function sizeForWeight(weight) {
 
 export function torqueNewton(objects, angle) {
   const lever = Math.cos(angle);
-  const load = objects.reduce((sum, object) => {
-    if (!object.placed) return sum;
-    return sum + object.weight * object.s;
-  }, 0);
-  return load * GRAVITY * lever - BOARD_RESTORE * Math.sin(angle);
+  return controllingMoment(objects) * GRAVITY * lever - BOARD_RESTORE * Math.sin(angle);
 }
 
 export function equilibriumAngle(objects) {
-  const target = Math.atan2(moment(objects) * GRAVITY, BOARD_RESTORE);
+  const target = Math.atan2(controllingMoment(objects) * GRAVITY, BOARD_RESTORE);
   return Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, target));
 }
 
 export function inertia(objects) {
+  const useAlt = Math.abs(moment(objects, "alt")) > Math.abs(moment(objects, "base"));
   return objects.reduce((sum, object) => {
     if (!object.placed) return sum;
-    return sum + object.weight * object.s * object.s;
+    const weight = variantWeight(object, useAlt ? "alt" : "base");
+    return sum + weight * object.s * object.s;
   }, BOARD_INERTIA);
 }
 
@@ -61,7 +70,7 @@ export function sideLoads(objects) {
   let right = 0;
   objects.forEach((object) => {
     if (!object.placed) return;
-    const load = object.weight * object.s;
+    const load = variantWeight(object, "base") * object.s;
     if (load < 0) left += -load;
     else right += load;
   });

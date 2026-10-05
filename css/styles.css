@@ -128,6 +128,8 @@ h1 {
 .beam-wrap.calm .beam, #beam.calm .beam { fill: #effbff; }
 .guide { fill: none; stroke: var(--accent); stroke-dasharray: 4 4; }
 .piece { cursor: grab; }
+.piece.locked { cursor: default; }
+.piece.locked .mass { stroke: var(--accent); stroke-dasharray: 5 3; }
 .piece.selected { cursor: grabbing; }
 .mass { fill: #e7eef5; stroke: #9eb0c2; stroke-width: 2; }
 .piece.selected .mass { stroke: var(--accent); stroke-width: 3; }
