@@ -1,13 +1,38 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createChallenge, classicSeed, isSolvable } from "../js/levels.js";
-import { inertia, moment, stepRotation, torqueNewton } from "../js/physics.js";
+import { inertia, moment, sizeForWeight, stepRotation, torqueNewton } from "../js/physics.js";
 import { dailySeed } from "../js/rng.js";
 import { scoreAttempt, verdict } from "../js/score.js";
 
 function placed(list) {
   return list.map((item) => ({ ...item, placed: true }));
 }
+
+test("a tipped board levels out once the torques match", () => {
+  const state = {
+    objects: placed([{ weight: 2, s: -2 }]),
+    angle: 0,
+    omega: 0,
+  };
+  for (let step = 0; step < 90; step += 1) stepRotation(state, 0.016);
+  const tipped = state.angle;
+  assert.ok(tipped < -0.2);
+
+  state.objects.push({ weight: 4, s: 1, placed: true });
+  assert.equal(moment(state.objects), 0);
+  for (let step = 0; step < 160; step += 1) stepRotation(state, 0.016);
+  assert.ok(Math.abs(state.angle) < 0.05, `still tipped at ${state.angle}`);
+});
+
+test("heavier blocks are drawn larger", () => {
+  assert.ok(sizeForWeight(4) > sizeForWeight(2));
+  assert.ok(sizeForWeight(8) > sizeForWeight(4));
+  const level = createChallenge(classicSeed(1), 1);
+  const light = level.objects.find((object) => object.weight === 2);
+  const heavy = level.objects.find((object) => object.weight === 4);
+  assert.ok(heavy.size > light.size);
+});
 
 test("equal torques cancel and unequal torque leans to the heavy side", () => {
   const balanced = placed([
